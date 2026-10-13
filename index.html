@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Concept design: Threads in chat</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+:root{--bg:#000;--card:#1c1c1c;--bubble:#2f2f2f;--sheet:#171717;--line:#2e2e2e;--muted:#9a9a9a;--blue:#0285ff;--ease:cubic-bezier(.16,1,.3,1);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;background:#050505;color:#fff;font:16px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.ic{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+body{display:flex;align-items:center;justify-content:center}
+.app{position:relative;width:100%;height:100%;max-width:402px;max-height:874px;background:var(--bg);overflow:hidden;--top:max(12px,env(safe-area-inset-top,0px))}
+@media(min-width:500px){.app{border-radius:48px;border:1px solid #262626;--top:54px;height:min(100%,874px)}.status{display:flex!important}}
+.status{display:none;position:absolute;top:0;left:0;right:0;height:54px;padding:18px 27px 0;font-weight:600;font-size:16px;z-index:5}
+.head{position:absolute;top:var(--top);left:0;right:0;height:52px;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;z-index:4}
+.circ{width:44px;height:44px;border-radius:22px;background:var(--card);border:1px solid #333;display:grid;place-items:center}
+.tag{position:absolute;left:72px;font-size:12px;color:var(--muted)}
+.right{display:flex;gap:9px}
+.tool{height:44px;width:106px;border-radius:22px;background:var(--card);border:1px solid #333;display:flex;align-items:center;justify-content:space-around;padding:0 6px}
+.chat{position:absolute;inset:0;overflow-y:auto;padding:calc(var(--top) + 72px) 16px 110px}
+.user{margin-left:auto;width:fit-content;max-width:80%;background:var(--bubble);border-radius:23px;padding:12px 16px;font-size:16px}
+.ans{margin-top:40px;font-size:17px;line-height:27px;-webkit-user-select:text;user-select:text}
+.ans ::selection,.ans::selection{background:#0a5b8f;color:#fff}
+.lnk{color:var(--blue);cursor:pointer}
+.pill{display:flex;align-items:center;gap:8px;margin-top:14px;height:30px;padding:0 12px 0 11px;border-radius:15px;background:#111;border:1px solid var(--line);color:var(--blue);font-size:14px;font-weight:600}
+.pill .ic{width:15px;height:15px}
+.pill[hidden],#dir[hidden],#hint[hidden]{display:none}
+.acts{display:flex;gap:20px;margin-top:14px;color:#ddd}.acts .ic{width:18px;height:18px}
+#hint{margin-top:28px;font-size:13px;color:#6f6f6f;max-width:300px}
+.comp{position:absolute;left:38px;right:38px;bottom:calc(20px + env(safe-area-inset-bottom,0px));height:50px;border-radius:25px;background:#1d1d1d;border:1px solid #363636;display:flex;align-items:center;gap:8px;padding:0 8px 0 14px}
+.comp input{flex:1;min-width:0;background:none;border:0;outline:0;color:#fff;font:inherit;font-size:16px}
+.comp input::placeholder{color:#777}
+.comp .ic{color:#aaa}
+.go{width:34px;height:34px;border-radius:17px;background:#0aa0ff;display:grid;place-items:center;color:#fff}
+.go .ic{color:#fff;stroke-width:2.4;width:18px;height:18px}
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s;z-index:6}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--sheet);border-radius:28px 28px 0 0;border:1px solid #262626;border-bottom:0;transform:translateY(102%);transition:transform .34s var(--ease);z-index:7;display:flex;flex-direction:column}
+.sheet.on{transform:none}
+#tsheet{height:70%}#asheet{height:80%}
+.grab{padding:10px 0 14px;touch-action:none;cursor:grab;flex:none}
+.grab i{display:block;width:36px;height:5px;border-radius:3px;background:#3d3d3d;margin:0 auto}
+.sh{padding:0 20px 12px;font-size:17px;font-weight:600;display:flex;align-items:center;gap:10px;flex:none}
+.badge{min-width:24px;height:24px;border-radius:12px;background:#243b5c;color:#6db2ff;font-size:12px;display:grid;place-items:center;padding:0 7px}
+.body{flex:1;overflow-y:auto;padding:4px 16px 16px}
+.msg{margin:12px 0;font-size:16px}
+.msg.u{margin-left:auto;width:fit-content;max-width:80%;background:var(--bubble);border-radius:20px;padding:9px 14px}
+.empty{color:#707070;font-size:14px;margin-top:6px}
+.dots{color:var(--muted)}
+#tsheet .comp{position:relative;left:auto;right:auto;bottom:auto;margin:6px 38px calc(20px + env(safe-area-inset-bottom,0px));flex:none}
+.day{font-size:13px;color:var(--muted);margin:14px 4px 6px}
+.row{display:block;width:100%;text-align:left;padding:12px 4px;border-bottom:1px solid #232323}
+.row b{display:block;font-weight:500;font-size:17px}
+.row q{display:block;color:var(--muted);font-size:14px;margin-top:3px;quotes:"\201C" "\201D";white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row small{display:block;color:#707070;font-size:12px;margin-top:6px}
+.menu{position:absolute;z-index:8;display:none;align-items:center;height:40px;border-radius:14px;background:#262626;border:1px solid #3a3a3a;box-shadow:0 8px 24px rgba(0,0,0,.5);padding:0 4px;font-size:14px;white-space:nowrap}
+.menu.on{display:flex}
+.menu button{height:30px;padding:0 12px;border-radius:9px;display:flex;align-items:center;gap:7px}
+.menu .ask{color:var(--blue);background:rgba(2,133,255,.16);font-weight:500}
+.menu .ic{width:15px;height:15px}
+.more{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom,0px));width:34px;height:34px;border-radius:17px;display:grid;place-items:center;z-index:2}
+.more .ic{width:18px;height:18px}.more[hidden]{display:none}
+.circ,.tool,.pill,.comp,.menu,.more{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.04)),rgba(44,44,48,.42);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),inset 0 -1px 0 rgba(255,255,255,.05),0 8px 22px rgba(0,0,0,.4)}
+.sheet{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02)),rgba(30,30,34,.66);-webkit-backdrop-filter:blur(34px) saturate(180%);backdrop-filter:blur(34px) saturate(180%);border:1px solid rgba(255,255,255,.15);border-bottom:0;box-shadow:inset 0 1px 0 rgba(255,255,255,.26),0 -14px 40px rgba(0,0,0,.5)}
+.scrim{background:rgba(0,0,0,.42)}
+.go{box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 4px 12px rgba(10,160,255,.4)}
+.msg.u{background:rgba(255,255,255,.13)}
+.row{border-bottom-color:rgba(255,255,255,.08)}
+.tt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sum{height:30px;padding:0 12px;border-radius:15px;font-size:13px;font-weight:600;color:var(--blue);background:rgba(2,133,255,.16);flex:none}.sum:disabled{opacity:.4;cursor:default}
+.x{width:30px;height:30px;display:grid;place-items:center;color:#aaa;flex:none}.x .ic{width:18px;height:18px}
+.ctx{padding:0 20px 8px;font-size:13px;color:var(--muted);line-height:1.4;flex:none}.ctx span{display:block;font-size:12px;color:#707070;margin-top:3px}.ctx mark{background:none;color:var(--blue)}
+.ctx i{font-style:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sumcard{margin:14px 0 4px;padding:12px 14px;border-radius:16px;background:rgba(2,133,255,.1);border:1px solid rgba(2,133,255,.3);font-size:14px}.sumcard p{margin:6px 0 10px;color:#ddd}.sumcard div{display:flex;gap:8px}.sumcard button{height:30px;padding:0 12px;border-radius:15px;background:rgba(255,255,255,.1);font-size:13px}.sumcard .pri{background:var(--blue);font-weight:600}
+.note{margin-top:14px;padding:12px 14px;border-radius:16px;background:#101114;border:1px solid var(--line);font-size:15px;line-height:22px}.note p{margin:6px 0 8px}.nl{display:flex;align-items:center;gap:6px;color:var(--blue);font-size:13px;font-weight:600}.nl .ic{width:14px;height:14px}.nr{font-size:12px;color:#7a7a7a}
+.srch{margin:0 20px 8px;height:38px;border-radius:19px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);padding:0 14px;color:#fff;font:inherit;font-size:15px;outline:0;flex:none}
+.try{margin-top:8px;color:var(--blue);font-size:13px;font-weight:600;padding:6px 0}
+.mb{margin-bottom:34px;scroll-margin-top:calc(var(--top) + 60px)}.rg{display:grid;color:#ddd}.ctx i{cursor:pointer}.st{color:var(--blue);font-size:12px;font-weight:600;margin-left:6px}
+.sumcard textarea{width:100%;margin:8px 0 10px;border-radius:12px;border:1px solid rgba(255,255,255,.16);background:rgba(0,0,0,.25);color:#eee;font:inherit;font-size:14px;padding:10px;resize:none;outline:0}
+.row.done b{color:#8a8a8a}.all{margin:4px 4px 0;color:var(--blue);font-size:13px;font-weight:600;padding:6px 0}
+.note.pulse{border-radius:16px}.pulse{border-radius:6px;animation:pl 1.8s ease-out}@keyframes pl{0%,55%{background:rgba(2,133,255,.4)}100%{background:rgba(2,133,255,0)}}
+button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.sheet,.scrim{transition:none}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+<symbol id="i-side" viewBox="0 0 24 24"><path d="M5 9h14M5 15h9"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 4H8a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4v-4M17 3.5 20.5 7 12 15.5 8.5 16l.5-3.5z"/></symbol>
+<symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/></symbol>
+<symbol id="i-tree" viewBox="0 0 24 24"><path d="M5 4h5v5H5zM5 15h5v5H5zM14 6.5h5M14 17.5h5M7.5 9v6"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3"/></symbol>
+<symbol id="i-wave" viewBox="0 0 24 24"><path d="M6 10v4M10 6v12M14 8v8M18 10v4"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V6M6 12l6-6 6 6"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/></symbol>
+<symbol id="i-thumb" viewBox="0 0 24 24"><path d="M7 11v8H4v-8zM7 11l4-7c1.5 0 2.5 1 2 3l-.5 3H18a2 2 0 0 1 2 2.3l-1 5A2 2 0 0 1 17 19H7"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 12v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></symbol>
+<symbol id="i-regen" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14-4M4 5v4h4M4 13a8 8 0 0 0 14 4M20 19v-4h-4"/></symbol></defs></svg>
+
+<main class="app" id="app">
+  <div class="status"><span>9:41</span></div>
+  <header class="head">
+    <button class="circ" aria-label="Sidebar"><svg class="ic"><use href="#i-side"/></svg></button>
+    <div class="right">
+      <button class="circ" id="dir" aria-label="All threads"><svg class="ic"><use href="#i-tree"/></svg></button>
+      <div class="tool"><svg class="ic"><use href="#i-edit"/></svg><svg class="ic"><use href="#i-dots"/></svg></div>
+    </div>
+  </header>
+
+  <section class="chat" id="chat">
+    <div id="msgs"></div>
+    <div id="notes"></div>
+    <p id="hint">Press and hold, or drag over, any words in the reply to try it. Replies in threads are scripted for this demo.<br><button class="try" id="try">Try it on “rich espresso”</button></p>
+  </section>
+
+  <div class="comp"><svg class="ic"><use href="#i-plus"/></svg><input readonly placeholder="Ask ChatGPT" aria-label="Message"><svg class="ic"><use href="#i-mic"/></svg><span class="go"><svg class="ic"><use href="#i-wave"/></svg></span></div>
+
+  <div class="menu" id="menu" role="menu">
+    <button class="ask" id="mAsk"><svg class="ic"><use href="#i-chat"/></svg>Ask about this</button>
+    <button id="mCopy">Copy</button><button id="mAll">Select All</button>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+
+  <section class="sheet" id="tsheet" aria-label="Thread">
+    <div class="grab" id="g1"><i></i></div>
+    <h2 class="sh"><span class="tt" id="tTitle"></span><button class="sum" id="sumBtn">Summarize</button><button class="x" id="delBtn" aria-label="Delete thread"><svg class="ic"><use href="#i-trash"/></svg></button></h2>
+    <p class="ctx" id="tCtx"></p>
+    <div class="body" id="tBody"></div>
+    <button class="more" id="more" aria-label="Scroll down" hidden><svg class="ic"><use href="#i-down"/></svg></button>
+    <div class="comp"><svg class="ic"><use href="#i-plus"/></svg><input id="tIn" placeholder="Ask a follow-up" aria-label="Ask a follow-up" autocomplete="off"><svg class="ic" id="tMic"><use href="#i-mic"/></svg><button class="go" id="tGo" aria-label="Send"><svg class="ic"><use id="tUse" href="#i-wave"/></svg></button></div>
+  </section>
+
+  <section class="sheet" id="asheet" aria-label="All threads">
+    <div class="grab" id="g2"><i></i></div>
+    <h2 class="sh">All threads <span class="badge" id="aCount">0</span></h2>
+    <input class="srch" id="srch" placeholder="Search threads" aria-label="Search threads">
+    <div class="body" id="aBody"></div>
+  </section>
+</main>
+
+<script>
+const MSGS=[
+{q:'Recipe for cappuccino',v:0,t:["A good cappuccino is all about balancing three things: rich espresso, smooth chocolate, and creamy milk. Here\u2019s a simple way to make one at home that tastes like a cafe version.","A cappuccino is equal parts espresso, steamed milk and foam. Pull a double shot, steam the milk, and pour the foam last. Fresh beans give the richest flavor."]},
+{q:'How do I steam the milk?',v:0,t:["Steam to about 60 to 65 \u00b0C, until the pitcher is hot but still comfortable to hold. Keep the wand just below the surface at first to add air, then sink it to swirl the milk into glossy microfoam.","Heat the milk gently and stop before 65 \u00b0C. Add air briefly for foam, then swirl until it looks like wet paint."]},
+{q:'What cups should I use?',v:0,t:["A 150 to 180 ml ceramic cup works best. Pre-warm it with hot water so the drink stays hot, and pick a rounded interior so the foam pours smoothly.","Use a small, thick ceramic cup of about 150 to 180 ml. Warm it first, and choose a wide rim if you want latte art."]}];
+const txt=(m,v=MSGS[m].v)=>MSGS[m].t[v];
+const $=s=>document.querySelector(s), menu=$('#menu'), app=$('#app');
+let seen=false, threads=[], cur=null, pending=null, timer=null, nextThreadId=1;
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const fmt=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+
+function renderAns(){
+  $('#msgs').innerHTML=MSGS.map((M,i)=>{
+    const T=threads.filter(t=>t.m===i),live=T.filter(t=>t.v===M.v).sort((a,b)=>a.s-b.s),x=txt(i),open=T.filter(t=>t.state==='open').length;
+    let h='',p=0; live.forEach(t=>{h+=esc(x.slice(p,t.s))+`<span class="lnk" data-id="${t.id}">${esc(x.slice(t.s,t.e))}</span>`;p=t.e}); h+=esc(x.slice(p));
+    return `<div class="mb" id="m${i}"><div class="user">${esc(M.q)}</div><p class="ans" data-m="${i}">${h}</p>`
+    +(T.length?`<button class="pill" data-m="${i}"><svg class="ic"><use href="#i-chat"/></svg><span>${T.length} ${T.length>1?'threads':'thread'}${open?' \u00b7 '+open+' open':''}</span><svg class="ic"><use href="#i-chev"/></svg></button>`:'')
+    +`<div class="acts"><svg class="ic"><use href="#i-copy"/></svg><svg class="ic"><use href="#i-thumb"/></svg><svg class="ic"><use href="#i-share"/></svg><button class="rg" data-m="${i}" aria-label="Regenerate"><svg class="ic"><use href="#i-regen"/></svg></button></div></div>`}).join('');
+  $('#notes').innerHTML=threads.filter(t=>t.added).sort((a,b)=>a.addedAt-b.addedAt).map(t=>`<div class="note"><button class="nl" data-id="${t.id}"><svg class="ic"><use href="#i-chat"/></svg>From thread: ${esc(t.phrase)}</button><p>${esc(t.summary)}</p><button class="nr" data-id="${t.id}">Remove</button></div>`).join('');
+  $('#hint').hidden=seen||!!threads.length;
+}
+
+/* selection -> menu */
+function selInfo(){
+  const s=getSelection(); if(!s.rangeCount||s.isCollapsed) return null;
+  const r=s.getRangeAt(0),n=r.commonAncestorContainer,el=(n.nodeType===1?n:n.parentElement).closest('.ans'); if(!el) return null;
+  const pre=document.createRange(); pre.selectNodeContents(el); pre.setEnd(r.startContainer,r.startOffset);
+  let txt=r.toString(), st=pre.toString().length+(txt.length-txt.trimStart().length); txt=txt.trim();
+  return txt?{m:+el.dataset.m,s:st,e:st+txt.length,rect:r.getBoundingClientRect()}:null;
+}
+function hideMenu(){menu.classList.remove('on');pending=null}
+document.addEventListener('selectionchange',()=>{
+  clearTimeout(timer);
+  timer=setTimeout(()=>{
+    const i=selInfo(); if(!i){ if(!menu.matches(':hover')) hideMenu(); return }
+    pending=i; menu.classList.add('on');
+    const a=app.getBoundingClientRect(), w=menu.offsetWidth;
+    let top=i.rect.bottom-a.top+10; if(top>a.height-200) top=i.rect.top-a.top-50;
+    top=Math.max(8,Math.min(top,a.height-menu.offsetHeight-8));
+    menu.style.top=top+'px';
+    menu.style.left=Math.max(12,Math.min(i.rect.left-a.left,a.width-w-12))+'px';
+  },160);
+});
+menu.addEventListener('mousedown',e=>e.preventDefault());
+$('#mAsk').onclick=()=>{
+  const p=pending; if(!p) return; hideMenu(); getSelection().removeAllRanges();
+  let t=threads.find(t=>t.m===p.m&&t.v===MSGS[p.m].v&&p.s<t.e&&p.e>t.s);
+  if(!t){t={id:nextThreadId++,m:p.m,v:MSGS[p.m].v,s:p.s,e:p.e,phrase:txt(p.m).slice(p.s,p.e),msgs:[],at:new Date(),state:'open'};threads.push(t);seen=true;renderAns()}
+  openThread(t.id);
+};
+$('#mCopy').onclick=()=>{try{const p=navigator.clipboard?.writeText(getSelection().toString());if(p&&p.catch)p.catch(()=>{})}catch(e){}hideMenu();getSelection().removeAllRanges()};
+$('#mAll').onclick=()=>{const r=document.createRange();r.selectNodeContents(document.querySelector('.ans[data-m="'+(pending?pending.m:0)+'"]'));const s=getSelection();s.removeAllRanges();s.addRange(r)};
+
+/* sheets */
+const scrim=$('#scrim'), ts=$('#tsheet'), as=$('#asheet');
+function closeAll(){
+  ts.classList.remove('on');as.classList.remove('on');scrim.classList.remove('on');
+  // Closing a thread is not the same as deleting it, even if it has no replies yet.
+  if(cur&&cur.msgs.length){const t=cur;setTimeout(()=>pulse(t),380)}
+  cur=null;
+}
+scrim.onclick=closeAll;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
+[['g1',ts],['g2',as]].forEach(([id])=>{
+  const g=$('#'+id); let y0=null;
+  g.addEventListener('pointerdown',e=>{y0=e.clientY;g.setPointerCapture(e.pointerId)});
+  g.addEventListener('pointermove',e=>{if(y0!==null&&e.clientY-y0>60){y0=null;closeAll()}});
+  g.addEventListener('pointerup',e=>{if(y0!==null&&Math.abs(e.clientY-y0)<6)closeAll();y0=null});
+});
+
+/* thread */
+function openThread(id){
+  as.classList.remove('on');
+  cur=threads.find(t=>t.id===id); if(!cur) return;
+  $('#tTitle').textContent=cur.phrase; ctx(); drawThread();
+  ts.classList.add('on'); scrim.classList.add('on');
+  setTimeout(()=>$('#tIn').focus({preventScroll:true}),380);
+}
+function drawThread(top){
+  const b=$('#tBody');
+  b.innerHTML=cur.msgs.length||cur.wait?cur.msgs.map(m=>`<div class="msg ${m.r}">${esc(m.t)}</div>`).join('')+(cur.wait?'<div class="msg dots">\u2026</div>':''):`<p class="empty">Ask anything about \u201C${esc(cur.phrase)}\u201D. The main chat stays as it is.</p>`;
+  const ro=cur.v!==MSGS[cur.m].v, busy=!!cur.wait;$('#tIn').disabled=$('#tGo').disabled=ro||busy;$('#tIn').placeholder=ro?'Read-only: this reply changed':busy?'Thinking…':'Ask a follow-up';
+  b.insertAdjacentHTML('beforeend',sumHTML()); $('#sumBtn').disabled=cur.msgs.length<2||!!cur.wait;
+  const ms=b.querySelectorAll('.msg.a'), l=ms[ms.length-1];
+  b.scrollTop=top&&l?l.offsetTop-b.offsetTop-8:b.scrollHeight;
+  chk();
+}
+function chk(){const b=$('#tBody');$('#more').hidden=b.scrollHeight-b.scrollTop-b.clientHeight<24}
+$('#tBody').addEventListener('scroll',chk);
+addEventListener('resize',chk);
+$('#more').onclick=()=>{const b=$('#tBody');b.scrollTo({top:b.scrollHeight,behavior:'smooth'})};
+function ctx(){const t=cur,X=txt(t.m,t.v),a=X.lastIndexOf('. ',t.s),s=a<0?0:a+2,d=X.indexOf('.',t.e),e=d<0?X.length:d+1,old=t.v!==MSGS[t.m].v;
+  $('#tCtx').innerHTML=`<i>${esc(X.slice(s,t.s))}<mark>${esc(t.phrase)}</mark>${esc(X.slice(t.e,e))}</i><span>${old?'This reply was regenerated, so this thread is read-only.':'Sees the chat up to this reply.'}<button class="st" id="stBtn">${t.state==='open'?'Mark resolved':'Reopen'}</button></span>`}
+function pulse(t){const el=$('#m'+t.m);if(!el)return;const s=el.querySelector(`[data-id="${t.id}"]`)||el.querySelector('.ans');s.classList.remove('pulse');void s.offsetWidth;s.classList.add('pulse')}
+function jump(t,open){
+  if(document.activeElement)document.activeElement.blur();
+  if(open){as.classList.remove('on');openThread(t.id)}else closeAll();
+  setTimeout(()=>{const el=$('#m'+t.m);if(el)el.scrollIntoView({behavior:open?'auto':'smooth',block:open?'start':'center'});if(!open)pulse(t)},open?60:320)}
+$('#tCtx').addEventListener('click',e=>{if(e.target.id==='stBtn'){cur.state=cur.state==='open'?'done':'open';ctx();renderAns()}else if(e.target.closest('i'))jump(cur,false)});
+function sumHTML(){
+  if(cur.added) return '<div class="sumcard"><b>Added to the end of the chat</b><p>It sits at the bottom of the main chat with a link back to this spot.</p><div><button data-a="rm">Remove from chat</button></div></div>';
+  if(cur.summary!=null) return `<div class="sumcard"><b>Summary</b><textarea id="sumTx" rows="4" aria-label="Edit summary">${esc(cur.summary)}</textarea><div><button class="pri" data-a="add">Add to main chat</button><button data-a="dis">Dismiss</button></div></div>`;
+  return '';
+}
+$('#sumBtn').onclick=()=>{if(!cur||cur.msgs.length<2||cur.wait)return;const f=cur.msgs.filter(m=>m.r==='a').map(m=>(m.t.match(/^.*?[.!?](\s|$)/)||[m.t])[0].trim());cur.summary='On “'+cur.phrase+'”: '+f.join(' ');cur.added=false;renderAns();drawThread()};
+$('#tBody').addEventListener('click',e=>{const a=e.target.dataset.a;if(!a||!cur)return;
+  if(a==='add'){const v=$('#sumTx').value.trim();if(v)cur.summary=v;cur.added=true;cur.addedAt=Date.now();cur.state='done';const t=cur;renderAns();ts.classList.remove('on');scrim.classList.remove('on');cur=null;
+    setTimeout(()=>{const n=document.querySelector(`.nl[data-id="${t.id}"]`),c=n&&n.closest('.note');if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.remove('pulse');void c.offsetWidth;c.classList.add('pulse')}},250);return}
+  else if(a==='rm'){cur.added=false;renderAns()}
+  else{cur.summary=null;cur.state='done';renderAns();ctx()}
+  drawThread()});
+$('#delBtn').onclick=()=>{threads=threads.filter(t=>t!==cur);cur=null;renderAns();closeAll()};
+$('#notes').addEventListener('click',e=>{const r=e.target.closest('.nr'),l=e.target.closest('.nl');if(r){const t=threads.find(t=>t.id==r.dataset.id);if(t){t.added=false;renderAns()}}else if(l){const t=threads.find(t=>t.id==l.dataset.id);if(t)jump(t,false)}});
+$('#srch').addEventListener('input',()=>drawAll());
+$('#try').onclick=()=>{const n=document.querySelector('.ans[data-m="0"]').firstChild,i=txt(0).indexOf('rich espresso'),r=document.createRange();r.setStart(n,i);r.setEnd(n,i+13);const s=getSelection();s.removeAllRanges();s.addRange(r)};
+function reply(q,p){
+  const l=q.toLowerCase();
+  if(/\b(g|gram|grams|quantity|much|ml)\b/.test(l)) return 'For a standard cappuccino, use about 18 g of ground coffee for a double shot, with roughly 120 ml of steamed milk.';
+  if(/(why|how|what|which|can|should)/.test(l)) return `On \u201C${p}\u201D: it shapes the balance of the drink, and small changes are easy to try. Start with the basics and adjust to taste.`;
+  return `Good point about \u201C${p}\u201D. Tell me what you\u2019d like to tweak and I\u2019ll suggest a starting point.`;
+}
+function send(){
+  const i=$('#tIn'), v=i.value.trim(); if(!v||!cur||cur.wait||cur.v!==MSGS[cur.m].v) return;
+  i.value=''; upd(); const t=cur; t.msgs.push({r:'u',t:v}); t.wait=true; drawThread();
+  setTimeout(()=>{t.wait=false;t.msgs.push({r:'a',t:reply(v,t.phrase)});if(cur===t)drawThread(true);if(as.classList.contains('on'))drawAll()},900);
+}
+function upd(){$('#tUse').setAttribute('href',$('#tIn').value.trim()?'#i-send':'#i-wave')}
+$('#tIn').addEventListener('input',upd);
+$('#tIn').addEventListener('keydown',e=>{if(e.key==='Enter')send()});
+$('#tGo').onclick=send;
+
+/* all threads */
+function drawAll(){
+  const f=($('#srch').value||'').toLowerCase(),list=threads.filter(t=>(fm===null||t.m===fm)&&(!f||(t.phrase+' '+t.msgs.map(m=>m.t).join(' ')).toLowerCase().includes(f))).sort((a,b)=>a.m-b.m||a.s-b.s);
+  $('#aCount').textContent=threads.length;
+  let h=fm!==null?'<button class="all" data-a="all">Show all threads</button>':'',last=-1;
+  list.forEach(t=>{
+    if(t.m!==last){last=t.m;h+=`<div class="day">${esc(MSGS[t.m].q)}</div>`}
+    const q=t.msgs.find(m=>m.r==='u'),done=t.state==='done';
+    h+=`<button class="row${done?' done':''}" data-id="${t.id}"><b>${esc(q?q.t:t.phrase)}</b><q>${esc(t.phrase)}</q><small>${done?'Resolved':'Open'}${t.added?' \u00b7 In main chat':''}${t.v!==MSGS[t.m].v?' \u00b7 Earlier version of reply':''}</small></button>`});
+  $('#aBody').innerHTML=h+(list.length?'':'<p class="empty">'+(f?'No threads match.':'No threads yet. Select words in the reply to start one.')+'</p>');
+}
+let fm=null;function openAll(m=null){fm=m;cur=null;drawAll();ts.classList.remove('on');as.classList.add('on');scrim.classList.add('on');hideMenu()}
+$('#dir').onclick=()=>openAll(null);
+$('#aBody').addEventListener('click',e=>{if(e.target.dataset.a==='all'){fm=null;drawAll();return}const r=e.target.closest('.row');if(r)jump(threads.find(t=>t.id==r.dataset.id),true)});
+$('#msgs').addEventListener('click',e=>{const l=e.target.closest('.lnk'),p=e.target.closest('.pill'),g=e.target.closest('.rg');
+  if(l&&getSelection().isCollapsed)openThread(+l.dataset.id);else if(p)openAll(+p.dataset.m);else if(g){const M=MSGS[+g.dataset.m];M.v=1-M.v;renderAns()}});
+
+renderAns();
+</script>
+</body>
+</html>
+
